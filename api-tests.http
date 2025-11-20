@@ -1,0 +1,331 @@
+### MessyOrderManagement API Tests
+### Base URL - Update if running on different port
+@baseUrl = http://localhost:5000
+
+### Variables
+@orderId = 1
+@orderIdToDelete = 2
+@customerId = 1
+@productId = 1
+
+###############################################
+# ORDERS
+###############################################
+
+### Get All Orders
+GET {{baseUrl}}/api/order
+Accept: application/json
+
+### Get All Orders with Status Filter
+GET {{baseUrl}}/api/order?status=Active
+Accept: application/json
+
+### Get All Orders with Customer Filter
+GET {{baseUrl}}/api/order?customerId=1
+Accept: application/json
+
+### Get All Orders with Multiple Filters
+GET {{baseUrl}}/api/order?status=Pending&customerId=1
+Accept: application/json
+
+### Get Order by ID
+GET {{baseUrl}}/api/order/{{orderId}}
+Accept: application/json
+
+### Create Order
+POST {{baseUrl}}/api/order
+Content-Type: application/json
+
+{
+  "customerId": 1,
+  "productId": 1,
+  "quantity": 3,
+  "price": 29.99,
+  "status": "Pending",
+  "date": "2024-01-15T10:00:00",
+  "notes": "Test order from HTTP file",
+  "total": 89.97
+}
+
+### Create Order (Minimal)
+POST {{baseUrl}}/api/order
+Content-Type: application/json
+
+{
+  "customerId": 2,
+  "productId": 3,
+  "quantity": 1,
+  "price": 79.99
+}
+
+### Update Order
+PUT {{baseUrl}}/api/order/{{orderId}}
+Content-Type: application/json
+
+{
+  "id": 1,
+  "customerId": 1,
+  "productId": 1,
+  "quantity": 5,
+  "price": 29.99,
+  "status": "Active",
+  "date": "2024-01-15T10:00:00",
+  "notes": "Updated order",
+  "total": 149.95
+}
+
+### Delete Order
+DELETE {{baseUrl}}/api/order/{{orderIdToDelete}}
+
+### Update Order Status
+PUT {{baseUrl}}/api/order/{{orderId}}/status
+Content-Type: application/json
+
+"Active"
+
+### Update Order Status to Completed
+PUT {{baseUrl}}/api/order/{{orderId}}/status
+Content-Type: application/json
+
+"Completed"
+
+### Update Order Status to Shipped
+PUT {{baseUrl}}/api/order/{{orderId}}/status
+Content-Type: application/json
+
+"Shipped"
+
+###############################################
+# CUSTOMERS
+###############################################
+
+### Get All Customers
+GET {{baseUrl}}/api/order/customer
+Accept: application/json
+
+### Create Customer
+POST {{baseUrl}}/api/order/customer
+Content-Type: application/json
+
+{
+  "name": "Test Customer",
+  "email": "test@example.com",
+  "phone": "5551234567",
+  "address": "123 Test Street",
+  "city": "Test City",
+  "state": "TS",
+  "zipCode": "12345",
+  "createdDate": "2024-01-15T10:00:00"
+}
+
+### Create Customer (Minimal)
+POST {{baseUrl}}/api/order/customer
+Content-Type: application/json
+
+{
+  "name": "Minimal Customer",
+  "email": "minimal@example.com",
+  "phone": "5559876543",
+  "address": "456 Minimal Ave",
+  "city": "Minimal City",
+  "state": "MC",
+  "zipCode": "54321"
+}
+
+### Update Customer
+PUT {{baseUrl}}/api/order/customer/{{customerId}}
+Content-Type: application/json
+
+{
+  "id": 1,
+  "name": "Updated Customer Name",
+  "email": "updated@example.com",
+  "phone": "5551112222",
+  "address": "789 Updated Road",
+  "city": "Updated City",
+  "state": "UC",
+  "zipCode": "99999",
+  "createdDate": "2024-01-01T00:00:00"
+}
+
+###############################################
+# PRODUCTS
+###############################################
+
+### Get All Products
+GET {{baseUrl}}/api/order/product
+Accept: application/json
+
+### Create Product
+POST {{baseUrl}}/api/order/product
+Content-Type: application/json
+
+{
+  "name": "Test Product",
+  "price": 49.99,
+  "stock": 100,
+  "category": "Test Category",
+  "description": "This is a test product",
+  "isActive": true,
+  "lastUpdated": "2024-01-15T10:00:00"
+}
+
+### Create Product (Minimal)
+POST {{baseUrl}}/api/order/product
+Content-Type: application/json
+
+{
+  "name": "Minimal Product",
+  "price": 19.99,
+  "stock": 50,
+  "category": "Minimal",
+  "isActive": true
+}
+
+### Update Product
+PUT {{baseUrl}}/api/order/product/{{productId}}
+Content-Type: application/json
+
+{
+  "id": 1,
+  "name": "Updated Product Name",
+  "price": 59.99,
+  "stock": 75,
+  "category": "Updated Category",
+  "description": "Updated description",
+  "isActive": true,
+  "lastUpdated": "2024-01-15T10:00:00"
+}
+
+### Update Product Stock
+PUT {{baseUrl}}/api/order/product/1
+Content-Type: application/json
+
+{
+  "id": 1,
+  "name": "Widget A",
+  "price": 29.99,
+  "stock": 95,
+  "category": "Electronics",
+  "description": "Basic widget",
+  "isActive": true,
+  "lastUpdated": "2024-01-15T10:00:00"
+}
+
+###############################################
+# REPORTS
+###############################################
+
+### Get Sales Report
+GET {{baseUrl}}/api/order/report/sales
+Accept: application/json
+
+###############################################
+# TEST SCENARIOS
+###############################################
+
+### Scenario 1: Create Customer, Product, then Order
+### Step 1: Create Customer
+POST {{baseUrl}}/api/order/customer
+Content-Type: application/json
+
+{
+  "name": "Scenario Customer",
+  "email": "scenario@example.com",
+  "phone": "5559998888",
+  "address": "100 Scenario St",
+  "city": "Scenario City",
+  "state": "SC",
+  "zipCode": "11111"
+}
+
+### Step 2: Create Product
+POST {{baseUrl}}/api/order/product
+Content-Type: application/json
+
+{
+  "name": "Scenario Product",
+  "price": 99.99,
+  "stock": 200,
+  "category": "Scenario",
+  "description": "Product for scenario testing",
+  "isActive": true
+}
+
+### Step 3: Create Order (use IDs from above)
+POST {{baseUrl}}/api/order
+Content-Type: application/json
+
+{
+  "customerId": 6,
+  "productId": 9,
+  "quantity": 2,
+  "price": 99.99,
+  "status": "Pending"
+}
+
+### Scenario 2: Get order, update status, then get again
+### Step 1: Get Order
+GET {{baseUrl}}/api/order/1
+Accept: application/json
+
+### Step 2: Update Status to Active
+PUT {{baseUrl}}/api/order/1/status
+Content-Type: application/json
+
+"Active"
+
+### Step 3: Get Order Again
+GET {{baseUrl}}/api/order/1
+Accept: application/json
+
+### Step 4: Update Status to Shipped
+PUT {{baseUrl}}/api/order/1/status
+Content-Type: application/json
+
+"Shipped"
+
+### Step 5: Get Order Final
+GET {{baseUrl}}/api/order/1
+Accept: application/json
+
+###############################################
+# ERROR TESTING (Testing the messy code!)
+###############################################
+
+### Test SQL Injection Vulnerability (DO NOT USE IN PRODUCTION!)
+GET {{baseUrl}}/api/order?status=' OR '1'='1
+Accept: application/json
+
+### Test Invalid Order ID
+GET {{baseUrl}}/api/order/99999
+Accept: application/json
+
+### Test Create Order with Null Body
+POST {{baseUrl}}/api/order
+Content-Type: application/json
+
+null
+
+### Test Update Order with Invalid ID
+PUT {{baseUrl}}/api/order/99999
+Content-Type: application/json
+
+{
+  "id": 99999,
+  "customerId": 1,
+  "productId": 1,
+  "quantity": 1,
+  "price": 10.00,
+  "status": "Pending",
+  "date": "2024-01-15T10:00:00",
+  "notes": "",
+  "total": 10.00
+}
+
+### Test Invalid Status Update
+PUT {{baseUrl}}/api/order/1/status
+Content-Type: application/json
+
+"InvalidStatus"
+

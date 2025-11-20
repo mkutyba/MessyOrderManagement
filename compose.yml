@@ -1,0 +1,45 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    container_name: messyorder-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=YourStrong@Password123
+    ports:
+      - "1434:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P YourStrong@Password123 -Q "SELECT 1" -C || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    container_name: messyorder-db-init
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      - MSSQL_SA_PASSWORD=YourStrong@Password123
+    volumes:
+      - ./Database:/docker-entrypoint-initdb.d
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        echo 'Waiting for SQL Server to be ready...'
+        sleep 5
+        echo 'Running database setup script...'
+        /opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P 'YourStrong@Password123' -C -d master -i /docker-entrypoint-initdb.d/Setup.sql
+        if [ $$? -eq 0 ]; then
+          echo 'Database setup completed successfully!'
+        else
+          echo 'Database setup failed!'
+          exit 1
+        fi
+
+volumes:
+  sqlserver_data:
