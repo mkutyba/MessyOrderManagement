@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using MessyOrderManagement.Models;
@@ -416,10 +415,10 @@ public class OrderControllerTests : IClassFixture<IntegrationTestBase>
         var activeStatusJson = JsonSerializer.Serialize("Active");
         var activeContent = new StringContent(activeStatusJson, Encoding.UTF8, "application/json");
         var activateResponse = await _client.PutAsync($"/api/order/{orderId}/status", activeContent, TestContext.Current.CancellationToken);
-        
+
         // Verify activation succeeded
         Assert.Equal(HttpStatusCode.OK, activateResponse.StatusCode);
-        
+
         // Verify the order is actually Active by fetching it
         var getOrderResponse = await _client.GetAsync($"/api/order/{orderId}", TestContext.Current.CancellationToken);
         var activeOrder = await getOrderResponse.Content.ReadFromJsonAsync<Order>(TestContext.Current.CancellationToken);
@@ -436,6 +435,7 @@ public class OrderControllerTests : IClassFixture<IntegrationTestBase>
             var errorContent = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
             Assert.Fail($"Expected OK but got {response.StatusCode}. Error: {errorContent}");
         }
+
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
@@ -461,10 +461,10 @@ public class OrderControllerTests : IClassFixture<IntegrationTestBase>
         var activeStatusJson = JsonSerializer.Serialize("Active");
         var activeContent = new StringContent(activeStatusJson, Encoding.UTF8, "application/json");
         var activateResponse = await _client.PutAsync($"/api/order/{orderId}/status", activeContent, TestContext.Current.CancellationToken);
-        
+
         // Verify activation succeeded
         Assert.Equal(HttpStatusCode.OK, activateResponse.StatusCode);
-        
+
         // Verify the order is actually Active by fetching it
         var getOrderResponse = await _client.GetAsync($"/api/order/{orderId}", TestContext.Current.CancellationToken);
         var activeOrder = await getOrderResponse.Content.ReadFromJsonAsync<Order>(TestContext.Current.CancellationToken);

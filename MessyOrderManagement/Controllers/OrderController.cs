@@ -1,11 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using System.Data;
-using System.Text.Json;
 using MessyOrderManagement.Models;
-using System.Text;
 using MessyOrderManagement.Data;
-using Microsoft.EntityFrameworkCore;
 
 namespace MessyOrderManagement.Controllers;
 
@@ -251,11 +246,19 @@ public class OrderController : ControllerBase
             return BadRequest();
         }
 
+        if (id <= 0)
+        {
+            logger.LogWarning($"Invalid customer ID {id} provided for update");
+            return BadRequest();
+        }
+
         try
         {
             var existing = db.Customers.FirstOrDefault(c => c.Id == id);
             if (existing == null)
             {
+                var allCustomers = db.Customers.ToList();
+                logger.LogWarning($"Customer with ID {id} not found for update. Total customers in DB: {allCustomers.Count}. Existing IDs: {string.Join(", ", allCustomers.Select(c => c.Id))}");
                 return NotFound();
             }
 
@@ -266,12 +269,17 @@ public class OrderController : ControllerBase
             existing.City = customer.City;
             existing.State = customer.State;
             existing.ZipCode = customer.ZipCode;
-            existing.CreatedDate = customer.CreatedDate;
+            // Preserve the original CreatedDate - do not overwrite it
             db.SaveChanges();
+
+            // Return the updated entity with correct ID and CreatedDate
             customer.Id = id;
+            customer.CreatedDate = existing.CreatedDate;
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError($"Error updating customer {id}: {ex.Message}");
+            logger.LogError($"Stack trace: {ex.StackTrace}");
             return StatusCode(500);
         }
 

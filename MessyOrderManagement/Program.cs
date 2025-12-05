@@ -18,11 +18,14 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
 });
 
-// Configure EF Core with SQL Server
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-                       ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<OrderDbContext>(options =>
-    options.UseSqlServer(connectionString));
+// Configure EF Core with SQL Server (unless already registered, e.g., in tests)
+if (builder.Services.All(s => s.ServiceType != typeof(OrderDbContext)))
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                           ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+    builder.Services.AddDbContext<OrderDbContext>(options =>
+        options.UseSqlServer(connectionString));
+}
 
 var app = builder.Build();
 

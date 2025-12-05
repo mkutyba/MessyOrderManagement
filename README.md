@@ -9,7 +9,7 @@ This project contains intentional bad practices including:
 - No error handling
 - Hardcoded values
 - Poor naming conventions
-- EF Core used with public fields (requiring workarounds)
+- N+1 query problems
 - And many more anti-patterns
 
 **Note:** SQL injection vulnerabilities have been reduced by introducing Entity Framework Core, but many other anti-patterns remain for educational purposes.
@@ -75,6 +75,20 @@ dotnet run
 
 The API will be available at `https://localhost:5001` or `http://localhost:5000`
 
+### Running Tests
+
+The project includes a comprehensive test suite using xUnit v3 and integration testing:
+
+```bash
+dotnet test
+```
+
+The test project (`MessyOrderManagement.Tests`) includes:
+- Integration tests using `WebApplicationFactory<Program>`
+- In-memory database for isolated testing
+- Test coverage for all API endpoints (Orders, Customers, Products, Reports)
+- Tests use xUnit v3 framework with `IClassFixture` pattern
+
 ## API Endpoints
 
 ### Orders
@@ -104,41 +118,49 @@ The API will be available at `https://localhost:5001` or `http://localhost:5000`
 - **Entity Framework Core 10** - ORM for database access (introduced to replace raw SQL, but still with messy patterns)
 - **SQL Server** - Database backend
 - **ASP.NET Core Web API** - Web framework
+- **xUnit v3** - Testing framework for integration tests
+- **Microsoft.AspNetCore.Mvc.Testing** - Integration testing support
+- **Entity Framework Core InMemory** - In-memory database provider for testing
 
 ## Anti-Patterns Included
 
-- ✅ Single god-class controller (500+ lines)
-- ✅ Minimal dependency injection (only DbContext, but still messy usage)
-- ✅ Direct database access in controllers (using EF Core, but no repository pattern)
-- ✅ No DTOs - entities used everywhere
-- ✅ Hardcoded connection strings (still present in controller)
-- ✅ Methods with 50+ lines
-- ✅ Nested if statements (5+ levels deep)
-- ✅ Magic numbers and strings
-- ✅ Minimal/no error handling
-- ✅ Poor variable names (a, b, temp, data, x, y)
-- ✅ Copy-pasted code blocks
-- ✅ Mixed responsibilities
-- ✅ EF Core used with public fields (requires EF.Property<T>() workarounds)
-- ✅ No validation
-- ✅ Public fields instead of properties
-- ✅ Static methods everywhere
-- ✅ Tight coupling
-- ✅ Var used inappropriately
-- ✅ Mixed async/sync
-- ✅ No using statements for disposables
-- ✅ Catch and ignore exceptions
-- ✅ DateTime.Now instead of UTC
-- ✅ Hardcoded file paths
-- ✅ Thread.Sleep in async methods
+- ❌ Single god-class controller (570+ lines)
+- ❌ Minimal dependency injection (only DbContext and ILogger, but still messy usage)
+- ❌ Direct database access in controllers (using EF Core, but no repository pattern)
+- ❌ No DTOs - entities used everywhere
+- ❌ Hardcoded connection strings (static field in controller)
+- ❌ Methods with 50+ lines (UpdateOrderStatus is 150+ lines, GetSalesReport is 60+ lines)
+- ❌ Nested if statements (7+ levels deep in UpdateOrderStatus)
+- ❌ Magic numbers and strings ("Pending", "Active", "Completed", "Shipped", 30 days, 8-18 hours)
+- ❌ Minimal/no error handling (empty catch blocks, catch and ignore exceptions)
+- ❌ Poor variable names (a, b, temp, data, x, y, count)
+- ❌ Copy-pasted code blocks (similar patterns in GetAllCustomers/GetAllProducts)
+- ❌ Mixed responsibilities (controller handles business logic, file I/O, data access)
+- ❌ No validation (no proper validation attributes or FluentValidation)
+- ❌ Static methods everywhere (Order.Create(), Order.IsValid(), Customer.New(), Product.GetDefault())
+- ❌ Tight coupling
+- ❌ Var used inappropriately (var a, var temp, var data, var x)
+- ❌ Mixed async/sync (async method uses Thread.Sleep and synchronous SaveChanges())
+- ❌ No using statements for disposables (StreamWriter.Close() instead of using statement)
+- ❌ Catch and ignore exceptions (empty catch blocks, catch without handling)
+- ❌ DateTime.Now instead of UTC
+- ❌ Hardcoded file paths (C:\Reports\)
+- ❌ Thread.Sleep in async methods (blocks async execution)
+- ❌ N+1 query problem (GetSalesReport queries database in a loop)
+- ❌ Inappropriate log levels (LogError for informational messages, LogWarning for info)
+- ❌ String concatenation in logging (should use structured logging)
+- ❌ Business logic in controller (status transition rules, price calculations)
+- ❌ Synchronous database operations in async methods (SaveChanges() instead of SaveChangesAsync())
+- ❌ Hardcoded business rules (30-day limit, 8-18 hour window)
 
 ## Recent Changes
 
 - **Entity Framework Core** has been introduced to replace raw SQL queries, making the codebase slightly more maintainable while still preserving many anti-patterns for training purposes.
 - The project now uses `OrderDbContext` for database access, but still maintains messy patterns like:
-  - Public fields requiring `EF.Property<T>()` workarounds
   - Direct DbContext usage in controllers
   - No repository pattern
+  - Synchronous operations in async methods
+  - N+1 query problems
   - All other anti-patterns remain intact
 
 ## Workshop Exercise
