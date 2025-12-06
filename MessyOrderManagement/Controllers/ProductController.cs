@@ -8,8 +8,8 @@ namespace MessyOrderManagement.Controllers;
 [Route("api/product")]
 public class ProductController : BaseController
 {
-    public ProductController(ILogger<ProductController> logger, OrderDbContext db)
-        : base(logger, db)
+    public ProductController(ILogger<ProductController> logger, OrderDbContext db, IHostEnvironment environment)
+        : base(logger, db, environment)
     {
     }
 
@@ -62,7 +62,10 @@ public class ProductController : BaseController
                 var existing = FindEntityById(db.Products, id, "product");
                 if (existing == null)
                 {
-                    return NotFound();
+                    return NotFound(new ErrorResponse
+                    {
+                        Message = $"product with ID {id} not found"
+                    });
                 }
 
                 product.LastUpdated = DateTime.Now;

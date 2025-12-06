@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using MessyOrderManagement.Models;
 using MessyOrderManagement.Data;
 using MessyOrderManagement.Constants;
@@ -9,8 +10,8 @@ namespace MessyOrderManagement.Controllers;
 [Route("api/order")]
 public class OrderController : BaseController
 {
-    public OrderController(ILogger<OrderController> logger, OrderDbContext db)
-        : base(logger, db)
+    public OrderController(ILogger<OrderController> logger, OrderDbContext db, IHostEnvironment environment)
+        : base(logger, db, environment)
     {
     }
 
@@ -36,7 +37,7 @@ public class OrderController : BaseController
                 if (!int.TryParse(Request.Query["customerId"].ToString(), out var custId))
                 {
                     logger.LogWarning("Invalid customerId parameter: {CustomerId}", Request.Query["customerId"]);
-                    return BadRequest();
+                    return BadRequest(new ErrorResponse { Message = "Invalid customerId parameter" });
                 }
                 query = query.Where(o => o.CustomerId == custId);
                 logger.LogDebug("Applied customer filter: {CustomerId}", custId);
@@ -45,10 +46,23 @@ public class OrderController : BaseController
             orders = query.ToList();
             logger.LogInformation("Found {Count} orders", orders.Count);
         }
+        catch (DbUpdateException ex)
+        {
+            logger.LogError(ex, "Database error retrieving orders");
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = "An error occurred while retrieving orders",
+                Details = environment.IsDevelopment() ? ex.Message : null
+            });
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error retrieving orders");
-            return StatusCode(500);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = "An error occurred while retrieving orders",
+                Details = environment.IsDevelopment() ? ex.ToString() : null
+            });
         }
 
         return Ok(orders);
@@ -121,7 +135,10 @@ public class OrderController : BaseController
                 var existing = FindEntityById(db.Orders, id, "order");
                 if (existing == null)
                 {
-                    return NotFound();
+                    return NotFound(new ErrorResponse
+                    {
+                        Message = $"order with ID {id} not found"
+                    });
                 }
 
                 var temp = order.Quantity * order.Price;
@@ -153,7 +170,10 @@ public class OrderController : BaseController
                 var existing = FindEntityById(db.Orders, id, "order");
                 if (existing == null)
                 {
-                    return NotFound();
+                    return NotFound(new ErrorResponse
+                    {
+                        Message = $"order with ID {id} not found"
+                    });
                 }
 
                 db.Orders.Remove(existing);
@@ -181,7 +201,10 @@ public class OrderController : BaseController
                 var order = FindEntityById(db.Orders, id, "order");
                 if (order == null)
                 {
-                    return NotFound();
+                    return NotFound(new ErrorResponse
+                    {
+                        Message = $"order with ID {id} not found"
+                    });
                 }
 
                 var currentStatus = order.Status ?? string.Empty;

@@ -8,8 +8,8 @@ namespace MessyOrderManagement.Controllers;
 [Route("api/customer")]
 public class CustomerController : BaseController
 {
-    public CustomerController(ILogger<CustomerController> logger, OrderDbContext db)
-        : base(logger, db)
+    public CustomerController(ILogger<CustomerController> logger, OrderDbContext db, IHostEnvironment environment)
+        : base(logger, db, environment)
     {
     }
 
@@ -66,7 +66,10 @@ public class CustomerController : BaseController
                 var existing = FindEntityById(db.Customers, id, "customer");
                 if (existing == null)
                 {
-                    return NotFound();
+                    return NotFound(new ErrorResponse
+                    {
+                        Message = $"customer with ID {id} not found"
+                    });
                 }
 
                 existing.Name = customer.Name;

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MessyOrderManagement.Data;
+using MessyOrderManagement.Models;
 
 namespace MessyOrderManagement.Controllers;
 
@@ -8,11 +9,13 @@ public abstract class BaseController : ControllerBase
 {
     protected readonly ILogger logger;
     protected readonly OrderDbContext db;
+    protected readonly IHostEnvironment environment;
 
-    protected BaseController(ILogger logger, OrderDbContext db)
+    protected BaseController(ILogger logger, OrderDbContext db, IHostEnvironment environment)
     {
         this.logger = logger;
         this.db = db;
+        this.environment = environment;
     }
 
     protected IActionResult GetAllEntities<T>(DbSet<T> dbSet, string entityTypeName) where T : class
@@ -24,10 +27,23 @@ public abstract class BaseController : ControllerBase
             logger.LogInformation("Retrieved {Count} {EntityType}", entities.Count, entityTypeName);
             return Ok(entities);
         }
+        catch (DbUpdateException ex)
+        {
+            logger.LogError(ex, "Database error retrieving {EntityType}", entityTypeName);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = $"An error occurred while retrieving {entityTypeName}",
+                Details = IsDevelopment() ? ex.Message : null
+            });
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error retrieving {EntityType}", entityTypeName);
-            return StatusCode(500);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = $"An error occurred while retrieving {entityTypeName}",
+                Details = IsDevelopment() ? ex.ToString() : null
+            });
         }
     }
 
@@ -40,16 +56,32 @@ public abstract class BaseController : ControllerBase
             if (entity == null)
             {
                 logger.LogWarning("{EntityType} {EntityId} not found", entityTypeName, id);
-                return NotFound();
+                return NotFound(new ErrorResponse
+                {
+                    Message = $"{entityTypeName} with ID {id} not found"
+                });
             }
 
             logger.LogInformation("{EntityType} {EntityId} retrieved successfully", entityTypeName, id);
             return Ok(entity);
         }
+        catch (DbUpdateException ex)
+        {
+            logger.LogError(ex, "Database error retrieving {EntityType} {EntityId}", entityTypeName, id);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = $"An error occurred while retrieving {entityTypeName}",
+                Details = IsDevelopment() ? ex.Message : null
+            });
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error retrieving {EntityType} {EntityId}", entityTypeName, id);
-            return StatusCode(500);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = $"An error occurred while retrieving {entityTypeName}",
+                Details = IsDevelopment() ? ex.ToString() : null
+            });
         }
     }
 
@@ -78,10 +110,23 @@ public abstract class BaseController : ControllerBase
         {
             return action();
         }
+        catch (DbUpdateException ex)
+        {
+            logger.LogError(ex, "Database error {Operation} {EntityType}", operation, entityType);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = $"An error occurred while {operation} {entityType}",
+                Details = IsDevelopment() ? ex.Message : null
+            });
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error {Operation} {EntityType}", operation, entityType);
-            return StatusCode(500);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = $"An error occurred while {operation} {entityType}",
+                Details = IsDevelopment() ? ex.ToString() : null
+            });
         }
     }
 
@@ -92,10 +137,28 @@ public abstract class BaseController : ControllerBase
             var result = action();
             return onSuccess(result);
         }
+        catch (DbUpdateException ex)
+        {
+            logger.LogError(ex, "Database error {Operation} {EntityType}", operation, entityType);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = $"An error occurred while {operation} {entityType}",
+                Details = IsDevelopment() ? ex.Message : null
+            });
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error {Operation} {EntityType}", operation, entityType);
-            return StatusCode(500);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = $"An error occurred while {operation} {entityType}",
+                Details = IsDevelopment() ? ex.ToString() : null
+            });
         }
+    }
+
+    private bool IsDevelopment()
+    {
+        return environment.IsDevelopment();
     }
 }
