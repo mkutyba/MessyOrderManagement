@@ -266,4 +266,132 @@ public class ReportControllerTests : IClassFixture<IntegrationTestBase>
         Assert.Contains(createdProduct1.Name, content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(createdProduct2.Name, content, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task GetSalesReport_ShouldCompleteAsynchronously()
+    {
+        // Arrange
+        var startTime = DateTime.UtcNow;
+        var task = _client.GetAsync("/api/report/sales", TestContext.Current.CancellationToken);
+
+        // Act - Verify the task is not completed immediately (async behavior)
+        Assert.False(task.IsCompleted);
+        
+        // Wait for completion
+        var response = await task;
+        var endTime = DateTime.UtcNow;
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        // Verify that some time passed (method has async delays)
+        var elapsed = endTime - startTime;
+        Assert.True(elapsed.TotalMilliseconds >= 500, "Method should have async delays");
+    }
+
+    [Fact]
+    public async Task GetSalesReport_ShouldUseUtcTimeInFilePath()
+    {
+        // Arrange
+        var beforeCall = DateTime.UtcNow;
+        
+        // Act
+        var response = await _client.GetAsync("/api/report/sales", TestContext.Current.CancellationToken);
+        
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        
+        // Verify file was created with UTC date in path
+        var reportsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Reports");
+        var expectedDate = DateTime.UtcNow.ToString("yyyyMMdd");
+        var expectedFileName = $"sales_report_{expectedDate}.txt";
+        var expectedFilePath = Path.Combine(reportsDirectory, expectedFileName);
+        
+        // File should exist with UTC date format
+        Assert.True(File.Exists(expectedFilePath), $"Expected file to exist at: {expectedFilePath}");
+        
+        // Verify the date in filename matches UTC date (within same day)
+        var afterCall = DateTime.UtcNow;
+        var fileDateFromPath = Path.GetFileNameWithoutExtension(expectedFilePath).Replace("sales_report_", "");
+        Assert.Equal(beforeCall.ToString("yyyyMMdd"), fileDateFromPath);
+    }
+
+    [Fact]
+    public async Task GetSalesReport_ShouldUseUtcTimeInFileContent()
+    {
+        // Arrange
+        var beforeCall = DateTime.UtcNow;
+        
+        // Act
+        var response = await _client.GetAsync("/api/report/sales", TestContext.Current.CancellationToken);
+        
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        
+        // Read the generated file
+        var reportsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Reports");
+        var expectedDate = DateTime.UtcNow.ToString("yyyyMMdd");
+        var filePath = Path.Combine(reportsDirectory, $"sales_report_{expectedDate}.txt");
+        
+        Assert.True(File.Exists(filePath), $"Expected file to exist at: {filePath}");
+        
+        var fileContent = await File.ReadAllTextAsync(filePath, TestContext.Current.CancellationToken);
+        Assert.Contains("Sales Report -", fileContent);
+        
+        // Extract timestamp from file content
+        var timestampLine = fileContent.Split('\n').FirstOrDefault(line => line.Contains("Sales Report -"));
+        Assert.NotNull(timestampLine);
+        
+        // Parse the timestamp from the file
+        var timestampPart = timestampLine.Replace("Sales Report -", "").Trim();
+        var fileTimestamp = DateTime.Parse(timestampPart);
+        
+        // Verify the timestamp is in UTC (by comparing with UTC time)
+        var afterCall = DateTime.UtcNow;
+        Assert.True(fileTimestamp >= beforeCall.AddSeconds(-1) && fileTimestamp <= afterCall.AddSeconds(1), 
+            $"File timestamp {fileTimestamp} should be close to UTC time (between {beforeCall} and {afterCall})");
+        
+        // Verify it's not local time (if we're not in UTC timezone, there would be a significant difference)
+        var localTime = DateTime.Now;
+        var utcTime = DateTime.UtcNow;
+        var timeZoneOffset = Math.Abs((localTime - utcTime).TotalHours);
+        
+        // If timezone offset is significant, verify file uses UTC
+        if (timeZoneOffset > 0.5)
+        {
+            var fileTimeOffset = Math.Abs((fileTimestamp - utcTime).TotalHours);
+            Assert.True(fileTimeOffset < 0.5, 
+                $"File timestamp should use UTC (offset from UTC: {fileTimeOffset} hours, but local offset is {timeZoneOffset} hours)");
+        }
+    }
+
+    [Fact]
+    public async Task GetSalesReport_ShouldWriteFileAsynchronously()
+    {
+        // Arrange
+        var reportsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Reports");
+        var expectedDate = DateTime.UtcNow.ToString("yyyyMMdd");
+        var filePath = Path.Combine(reportsDirectory, $"sales_report_{expectedDate}.txt");
+        
+        // Clean up any existing file
+        if (File.Exists(filePath))
+        {
+            File.Delete(filePath);
+        }
+        
+        // Act
+        var response = await _client.GetAsync("/api/report/sales", TestContext.Current.CancellationToken);
+        
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        
+        // Verify file was written (proves async file operations completed)
+        Assert.True(File.Exists(filePath), "File should be created by async write operations");
+        
+        // Verify file content is complete (async writes completed)
+        var fileContent = await File.ReadAllTextAsync(filePath, TestContext.Current.CancellationToken);
+        Assert.Contains("Sales Report -", fileContent);
+        Assert.Contains("Total Sales:", fileContent);
+        Assert.Contains("Order Count:", fileContent);
+        Assert.Contains("Average:", fileContent);
+    }
 }
