@@ -20,16 +20,20 @@ public class CustomerController : ControllerBase
     [HttpGet]
     public IActionResult GetAllCustomers()
     {
-        var a = new List<Customer>();
+        logger.LogDebug("Getting all customers");
+        var customers = new List<Customer>();
         try
         {
-            a = db.Customers.ToList();
+            customers = db.Customers.ToList();
+            logger.LogInformation("Retrieved {Count} customers", customers.Count);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Error retrieving customers");
+            return StatusCode(500);
         }
 
-        return Ok(a);
+        return Ok(customers);
     }
 
     [HttpPost]
@@ -37,6 +41,7 @@ public class CustomerController : ControllerBase
     {
         if (customer == null)
         {
+            logger.LogWarning("CreateCustomer called with null customer");
             return BadRequest();
         }
 
@@ -44,18 +49,17 @@ public class CustomerController : ControllerBase
         {
             if (customer.CreatedDate == DateTime.MinValue)
             {
-                customer.CreatedDate = DateTime.Now;
+                customer.CreatedDate = DateTime.UtcNow;
             }
 
             db.Customers.Add(customer);
             db.SaveChanges();
-            logger.LogInformation("Customer created with ID: " + customer.Id);
-            logger.LogInformation("Returning created customer with ID: " + customer.Id);
+            logger.LogInformation("Customer created successfully with ID: {CustomerId}", customer.Id);
             return Created($"/api/customer/{customer.Id}", customer);
         }
         catch (Exception ex)
         {
-            logger.LogInformation("Error creating customer: " + ex.Message);
+            logger.LogError(ex, "Error creating customer");
             return StatusCode(500);
         }
     }
@@ -65,12 +69,13 @@ public class CustomerController : ControllerBase
     {
         if (customer == null)
         {
+            logger.LogWarning("UpdateCustomer called with null customer");
             return BadRequest();
         }
 
         if (id <= 0)
         {
-            logger.LogWarning($"Invalid customer ID {id} provided for update");
+            logger.LogWarning("Invalid customer ID {CustomerId} provided for update", id);
             return BadRequest();
         }
 
@@ -79,8 +84,7 @@ public class CustomerController : ControllerBase
             var existing = db.Customers.FirstOrDefault(c => c.Id == id);
             if (existing == null)
             {
-                var allCustomers = db.Customers.ToList();
-                logger.LogWarning($"Customer with ID {id} not found for update. Total customers in DB: {allCustomers.Count}. Existing IDs: {string.Join(", ", allCustomers.Select(c => c.Id))}");
+                logger.LogWarning("Customer {CustomerId} not found for update", id);
                 return NotFound();
             }
 
@@ -97,11 +101,11 @@ public class CustomerController : ControllerBase
             // Return the updated entity with correct ID and CreatedDate
             customer.Id = id;
             customer.CreatedDate = existing.CreatedDate;
+            logger.LogInformation("Customer {CustomerId} updated successfully", id);
         }
         catch (Exception ex)
         {
-            logger.LogError($"Error updating customer {id}: {ex.Message}");
-            logger.LogError($"Stack trace: {ex.StackTrace}");
+            logger.LogError(ex, "Error updating customer {CustomerId}", id);
             return StatusCode(500);
         }
 

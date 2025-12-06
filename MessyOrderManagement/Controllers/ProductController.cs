@@ -20,16 +20,20 @@ public class ProductController : ControllerBase
     [HttpGet]
     public IActionResult GetAllProducts()
     {
-        var a = new List<Product>();
+        logger.LogDebug("Getting all products");
+        var products = new List<Product>();
         try
         {
-            a = db.Products.ToList();
+            products = db.Products.ToList();
+            logger.LogInformation("Retrieved {Count} products", products.Count);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Error retrieving products");
+            return StatusCode(500);
         }
 
-        return Ok(a);
+        return Ok(products);
     }
 
     [HttpPost]
@@ -37,21 +41,25 @@ public class ProductController : ControllerBase
     {
         if (product == null)
         {
+            logger.LogWarning("CreateProduct called with null product");
             return BadRequest();
         }
 
+        logger.LogDebug("Creating product: {ProductName}", product.Name);
         try
         {
             if (product.LastUpdated == DateTime.MinValue)
             {
-                product.LastUpdated = DateTime.Now;
+                product.LastUpdated = DateTime.UtcNow;
             }
 
             db.Products.Add(product);
             db.SaveChanges();
+            logger.LogInformation("Product created successfully with ID: {ProductId}", product.Id);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Error creating product: {ProductName}", product.Name);
             return StatusCode(500);
         }
 
@@ -63,14 +71,17 @@ public class ProductController : ControllerBase
     {
         if (product == null)
         {
+            logger.LogWarning("UpdateProduct called with null product");
             return BadRequest();
         }
 
+        logger.LogDebug("Updating product {ProductId}", id);
         try
         {
             var existing = db.Products.FirstOrDefault(p => p.Id == id);
             if (existing == null)
             {
+                logger.LogWarning("Product {ProductId} not found for update", id);
                 return NotFound();
             }
 
@@ -84,9 +95,11 @@ public class ProductController : ControllerBase
             existing.LastUpdated = product.LastUpdated;
             db.SaveChanges();
             product.Id = id;
+            logger.LogInformation("Product {ProductId} updated successfully", id);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Error updating product {ProductId}", id);
             return StatusCode(500);
         }
 

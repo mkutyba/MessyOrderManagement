@@ -22,77 +22,82 @@ public class OrderController : ControllerBase
     public IActionResult GetAllOrders()
     {
         logger.LogInformation("Getting orders");
-        var a = new List<Order>();
+        var orders = new List<Order>();
         try
         {
-            logger.LogError("Querying database");
+            logger.LogDebug("Querying database for orders");
             var query = db.Orders.AsQueryable();
-            logger.LogWarning("Query: " + query.ToString());
+            
             if (Request.Query.ContainsKey("status"))
             {
                 var status = Request.Query["status"].ToString();
                 query = query.Where(o => o.Status == status);
-                logger.LogInformation("Status filter: " + status);
+                logger.LogDebug("Applied status filter: {Status}", status);
             }
 
             if (Request.Query.ContainsKey("customerId"))
             {
-                var custId = int.Parse(Request.Query["customerId"].ToString());
+                if (!int.TryParse(Request.Query["customerId"].ToString(), out var custId))
+                {
+                    logger.LogWarning("Invalid customerId parameter: {CustomerId}", Request.Query["customerId"]);
+                    return BadRequest();
+                }
                 query = query.Where(o => o.CustomerId == custId);
-                logger.LogDebug("Customer filter");
+                logger.LogDebug("Applied customer filter: {CustomerId}", custId);
             }
 
-            a = query.ToList();
-            var count = a.Count;
-            logger.LogError("Found " + count + " orders");
+            orders = query.ToList();
+            logger.LogInformation("Found {Count} orders", orders.Count);
         }
-        catch
+        catch (Exception ex)
         {
-            logger.LogInformation("Error happened");
+            logger.LogError(ex, "Error retrieving orders");
+            return StatusCode(500);
         }
 
-        return Ok(a);
+        return Ok(orders);
     }
 
     [HttpGet("{id}")]
     public IActionResult GetOrder(int id)
     {
-        logger.LogWarning("GetOrder called with id: " + id);
-        Order data = null;
+        logger.LogDebug("Getting order with ID: {OrderId}", id);
+        Order order = null;
         try
         {
-            logger.LogError("Executing query for id: " + id);
-            data = db.Orders.FirstOrDefault(o => o.Id == id);
-            if (data != null)
+            order = db.Orders.FirstOrDefault(o => o.Id == id);
+            if (order != null)
             {
-                logger.LogInformation("Order found");
+                logger.LogInformation("Order {OrderId} retrieved successfully", id);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            logger.LogInformation("Exception");
+            logger.LogError(ex, "Error retrieving order {OrderId}", id);
+            return StatusCode(500);
         }
 
-        if (data == null)
+        if (order == null)
         {
-            logger.LogError("Not found");
+            logger.LogWarning("Order {OrderId} not found", id);
             return NotFound();
         }
 
-        return Ok(data);
+        return Ok(order);
     }
 
     [HttpPost]
     public IActionResult CreateOrder([FromBody] Order? order)
     {
-        logger.LogError("CreateOrder started");
+        logger.LogInformation("Creating new order");
         if (order == null)
         {
-            logger.LogWarning("Order is null");
+            logger.LogWarning("CreateOrder called with null order");
             return BadRequest();
         }
 
-        logger.LogInformation("Creating order for customer " + order.CustomerId + " product " + order.ProductId);
+        logger.LogDebug("Creating order for customer {CustomerId}, product {ProductId}, quantity {Quantity}", 
+            order.CustomerId, order.ProductId, order.Quantity);
         try
         {
             // Handle 0 values - use defaults if not set (messy but works)
@@ -100,9 +105,9 @@ public class OrderController : ControllerBase
             if (order.ProductId == OrderConstants.ZeroValue) order.ProductId = OrderConstants.DefaultProductId;
             if (order.Quantity == OrderConstants.ZeroValue) order.Quantity = OrderConstants.DefaultQuantity;
             if (order.Price == OrderConstants.ZeroValue) order.Price = OrderConstants.DefaultPrice;
-            var temp = order.Quantity * order.Price;
-            order.Total = temp;
-            logger.LogDebug("Total calculated: " + temp);
+            var total = order.Quantity * order.Price;
+            order.Total = total;
+            logger.LogDebug("Order total calculated: {Total}", total);
             if (order.Status == null)
             {
                 order.Status = OrderConstants.StatusPending;
@@ -110,17 +115,16 @@ public class OrderController : ControllerBase
 
             if (order.Date == DateTime.MinValue)
             {
-                order.Date = DateTime.Now;
+                order.Date = DateTime.UtcNow;
             }
 
-            logger.LogError("Adding order to database");
             db.Orders.Add(order);
             db.SaveChanges();
-            logger.LogInformation("Order created with ID: " + order.Id);
+            logger.LogInformation("Order created successfully with ID: {OrderId}", order.Id);
         }
         catch (Exception ex)
         {
-            logger.LogInformation("Error creating order: " + ex.Message);
+            logger.LogError(ex, "Error creating order for customer {CustomerId}", order.CustomerId);
             return StatusCode(500);
         }
 
@@ -135,14 +139,17 @@ public class OrderController : ControllerBase
     {
         if (order == null)
         {
+            logger.LogWarning("UpdateOrder called with null order");
             return BadRequest();
         }
 
+        logger.LogDebug("Updating order {OrderId}", id);
         try
         {
             var existing = db.Orders.FirstOrDefault(o => o.Id == id);
             if (existing == null)
             {
+                logger.LogWarning("Order {OrderId} not found for update", id);
                 return NotFound();
             }
 
@@ -158,9 +165,11 @@ public class OrderController : ControllerBase
             existing.Total = order.Total;
             db.SaveChanges();
             order.Id = id;
+            logger.LogInformation("Order {OrderId} updated successfully", id);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Error updating order {OrderId}", id);
             return StatusCode(500);
         }
 
@@ -170,24 +179,23 @@ public class OrderController : ControllerBase
     [HttpDelete("{id}")]
     public IActionResult DeleteOrder(int id)
     {
-        logger.LogWarning("Deleting order " + id);
+        logger.LogInformation("Deleting order {OrderId}", id);
         try
         {
             var existing = db.Orders.FirstOrDefault(o => o.Id == id);
             if (existing == null)
             {
-                logger.LogError("Order not found for delete");
+                logger.LogWarning("Order {OrderId} not found for deletion", id);
                 return NotFound();
             }
 
-            logger.LogInformation("Deleting order: " + id);
             db.Orders.Remove(existing);
             db.SaveChanges();
-            logger.LogError("Order deleted");
+            logger.LogInformation("Order {OrderId} deleted successfully", id);
         }
-        catch
+        catch (Exception ex)
         {
-            logger.LogInformation("Delete failed");
+            logger.LogError(ex, "Error deleting order {OrderId}", id);
             return StatusCode(500);
         }
 
@@ -197,10 +205,10 @@ public class OrderController : ControllerBase
     [HttpPut("{id}/status")]
     public IActionResult UpdateOrderStatus(int id, [FromBody] string status)
     {
-        logger.LogError("Status update: order " + id + " to " + status);
+        logger.LogInformation("Updating order {OrderId} status to {Status}", id, status);
         if (string.IsNullOrEmpty(status))
         {
-            logger.LogWarning("Status is empty");
+            logger.LogWarning("UpdateOrderStatus called with empty status for order {OrderId}", id);
             return BadRequest();
         }
 
@@ -209,13 +217,14 @@ public class OrderController : ControllerBase
             var order = db.Orders.FirstOrDefault(o => o.Id == id);
             if (order == null)
             {
-                logger.LogInformation("Order not found");
+                logger.LogWarning("Order {OrderId} not found for status update", id);
                 return NotFound();
             }
 
             var currentStatus = order.Status ?? string.Empty;
             var orderDate = order.Date;
-            logger.LogError("Current status: " + currentStatus + " new: " + status);
+            logger.LogDebug("Order {OrderId} status transition: {CurrentStatus} -> {NewStatus}", 
+                id, currentStatus, status);
             if (status == OrderConstants.StatusActive)
             {
                 if (currentStatus == OrderConstants.StatusPending)
@@ -341,10 +350,11 @@ public class OrderController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error updating order status");
+            logger.LogError(ex, "Error updating order {OrderId} status to {Status}", id, status);
             return StatusCode(500);
         }
 
+        logger.LogInformation("Order {OrderId} status updated successfully to {Status}", id, status);
         return Ok();
     }
 }
