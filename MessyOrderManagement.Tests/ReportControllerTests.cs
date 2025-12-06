@@ -139,4 +139,131 @@ public class ReportControllerTests : IClassFixture<IntegrationTestBase>
         var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.False(string.IsNullOrEmpty(content));
     }
+
+    [Fact]
+    public async Task GetSalesReport_ShouldLoadCustomerAndProductData()
+    {
+        // Arrange - Create a customer and product first
+        var customer = new Customer
+        {
+            Name = "John Doe",
+            Email = "john@example.com",
+            Phone = "555-1234",
+            CreatedDate = DateTime.Now
+        };
+
+        var customerResponse = await _client.PostAsJsonAsync("/api/customer", customer, TestContext.Current.CancellationToken);
+        var createdCustomer = await customerResponse.Content.ReadFromJsonAsync<Customer>(TestContext.Current.CancellationToken);
+
+        var product = new Product
+        {
+            Name = "Test Widget",
+            Price = 25.00m,
+            Stock = 50,
+            Category = "Electronics",
+            IsActive = true,
+            LastUpdated = DateTime.Now
+        };
+
+        var productResponse = await _client.PostAsJsonAsync("/api/product", product, TestContext.Current.CancellationToken);
+        var createdProduct = await productResponse.Content.ReadFromJsonAsync<Product>(TestContext.Current.CancellationToken);
+
+        // Create an order with non-pending status
+        var activeOrder = new Order
+        {
+            CustomerId = createdCustomer!.Id,
+            ProductId = createdProduct!.Id,
+            Quantity = 2,
+            Price = 25.00m,
+            Status = "Active",
+            Date = DateTime.Now
+        };
+
+        await _client.PostAsJsonAsync("/api/order", activeOrder, TestContext.Current.CancellationToken);
+
+        // Act
+        var response = await _client.GetAsync("/api/report/sales", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        
+        // Verify that customer and product names are in the report
+        // This proves that eager loading worked (no N+1 problem)
+        Assert.Contains(createdCustomer.Name, content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(createdProduct.Name, content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task GetSalesReport_ShouldNotHaveNPlusOneProblem()
+    {
+        // Arrange - Create multiple orders with different customers and products
+        var customer1 = new Customer
+        {
+            Name = "Alice Smith",
+            Email = "alice@example.com",
+            CreatedDate = DateTime.Now
+        };
+        var customer1Response = await _client.PostAsJsonAsync("/api/customer", customer1, TestContext.Current.CancellationToken);
+        var createdCustomer1 = await customer1Response.Content.ReadFromJsonAsync<Customer>(TestContext.Current.CancellationToken);
+
+        var customer2 = new Customer
+        {
+            Name = "Bob Johnson",
+            Email = "bob@example.com",
+            CreatedDate = DateTime.Now
+        };
+        var customer2Response = await _client.PostAsJsonAsync("/api/customer", customer2, TestContext.Current.CancellationToken);
+        var createdCustomer2 = await customer2Response.Content.ReadFromJsonAsync<Customer>(TestContext.Current.CancellationToken);
+
+        var product1 = new Product
+        {
+            Name = "Product Alpha",
+            Price = 10.00m,
+            Stock = 100,
+            IsActive = true,
+            LastUpdated = DateTime.Now
+        };
+        var product1Response = await _client.PostAsJsonAsync("/api/product", product1, TestContext.Current.CancellationToken);
+        var createdProduct1 = await product1Response.Content.ReadFromJsonAsync<Product>(TestContext.Current.CancellationToken);
+
+        var product2 = new Product
+        {
+            Name = "Product Beta",
+            Price = 20.00m,
+            Stock = 50,
+            IsActive = true,
+            LastUpdated = DateTime.Now
+        };
+        var product2Response = await _client.PostAsJsonAsync("/api/product", product2, TestContext.Current.CancellationToken);
+        var createdProduct2 = await product2Response.Content.ReadFromJsonAsync<Product>(TestContext.Current.CancellationToken);
+
+        // Create multiple orders
+        var orders = new[]
+        {
+            new Order { CustomerId = createdCustomer1!.Id, ProductId = createdProduct1!.Id, Quantity = 1, Price = 10.00m, Status = "Active", Date = DateTime.Now },
+            new Order { CustomerId = createdCustomer1!.Id, ProductId = createdProduct2!.Id, Quantity = 2, Price = 20.00m, Status = "Completed", Date = DateTime.Now },
+            new Order { CustomerId = createdCustomer2!.Id, ProductId = createdProduct1!.Id, Quantity = 3, Price = 10.00m, Status = "Active", Date = DateTime.Now },
+            new Order { CustomerId = createdCustomer2!.Id, ProductId = createdProduct2!.Id, Quantity = 1, Price = 20.00m, Status = "Shipped", Date = DateTime.Now }
+        };
+
+        foreach (var order in orders)
+        {
+            await _client.PostAsJsonAsync("/api/order", order, TestContext.Current.CancellationToken);
+        }
+
+        // Act
+        var response = await _client.GetAsync("/api/report/sales", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        
+        // Verify all customer and product names are present
+        // If N+1 problem existed, some names would be missing or empty
+        Assert.Contains(createdCustomer1.Name, content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(createdCustomer2.Name, content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(createdProduct1.Name, content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(createdProduct2.Name, content, StringComparison.OrdinalIgnoreCase);
+    }
 }
