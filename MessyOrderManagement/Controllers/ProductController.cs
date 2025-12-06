@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MessyOrderManagement.Models;
 using MessyOrderManagement.Data;
+using MessyOrderManagement.Repositories;
 
 namespace MessyOrderManagement.Controllers;
 
@@ -8,8 +9,8 @@ namespace MessyOrderManagement.Controllers;
 [Route("api/product")]
 public class ProductController : BaseController
 {
-    public ProductController(ILogger<ProductController> logger, OrderDbContext db, IHostEnvironment environment)
-        : base(logger, db, environment)
+    public ProductController(ILogger<ProductController> logger, OrderDbContext db, IOrderRepository orderRepository, IHostEnvironment environment)
+        : base(logger, db, orderRepository, environment)
     {
     }
 

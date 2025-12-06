@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using MessyOrderManagement.Data;
+using MessyOrderManagement.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +27,9 @@ if (builder.Services.All(s => s.ServiceType != typeof(OrderDbContext)))
     builder.Services.AddDbContext<OrderDbContext>(options =>
         options.UseSqlServer(connectionString));
 }
+
+// Register repository
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 
 var app = builder.Build();
 

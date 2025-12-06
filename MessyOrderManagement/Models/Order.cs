@@ -36,6 +36,12 @@ public class Order
     [Column("Total", TypeName = "decimal(18,2)")]
     public decimal Total { get; set; }
 
+    [ForeignKey("CustomerId")]
+    public Customer? Customer { get; set; }
+
+    [ForeignKey("ProductId")]
+    public Product? Product { get; set; }
+
     public static Order Create()
     {
         var a = new Order();

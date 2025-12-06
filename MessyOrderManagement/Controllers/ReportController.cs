@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MessyOrderManagement.Data;
 using MessyOrderManagement.Constants;
+using MessyOrderManagement.Repositories;
 
 namespace MessyOrderManagement.Controllers;
 
@@ -9,12 +10,12 @@ namespace MessyOrderManagement.Controllers;
 public class ReportController : ControllerBase
 {
     private readonly ILogger<ReportController> logger;
-    private readonly OrderDbContext db;
+    private readonly IOrderRepository orderRepository;
 
-    public ReportController(ILogger<ReportController> logger, OrderDbContext db)
+    public ReportController(ILogger<ReportController> logger, IOrderRepository orderRepository)
     {
         this.logger = logger;
-        this.db = db;
+        this.orderRepository = orderRepository;
     }
 
     [HttpGet("sales")]
@@ -25,9 +26,8 @@ public class ReportController : ControllerBase
         try
         {
             await Task.Delay(500);
-            var orders = db.Orders
-                .Where(o => o.Status != OrderConstants.StatusPending)
-                .ToList();
+            // Single query with eager loading - no N+1 problem!
+            var orders = await orderRepository.GetSalesReportDataAsync();
             
             logger.LogDebug("Retrieved {Count} non-pending orders for report", orders.Count);
             
@@ -35,15 +35,14 @@ public class ReportController : ControllerBase
             var count = 0;
             foreach (var order in orders)
             {
-                var customer = db.Customers.FirstOrDefault(c => c.Id == order.CustomerId);
-                var product = db.Products.FirstOrDefault(p => p.Id == order.ProductId);
+                // No more queries in loop - data already loaded!
                 var x = new
                 {
                     OrderId = order.Id,
                     Date = order.Date,
                     Total = order.Total,
-                    Customer = customer?.Name ?? "",
-                    Product = product?.Name ?? ""
+                    Customer = order.Customer?.Name ?? "",
+                    Product = order.Product?.Name ?? ""
                 };
                 data.Add(x);
                 total = total + order.Total;

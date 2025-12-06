@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MessyOrderManagement.Data;
 using MessyOrderManagement.Models;
+using MessyOrderManagement.Repositories;
 
 namespace MessyOrderManagement.Controllers;
 
@@ -9,12 +10,14 @@ public abstract class BaseController : ControllerBase
 {
     protected readonly ILogger logger;
     protected readonly OrderDbContext db;
+    protected readonly IOrderRepository orderRepository;
     protected readonly IHostEnvironment environment;
 
-    protected BaseController(ILogger logger, OrderDbContext db, IHostEnvironment environment)
+    protected BaseController(ILogger logger, OrderDbContext db, IOrderRepository orderRepository, IHostEnvironment environment)
     {
         this.logger = logger;
         this.db = db;
+        this.orderRepository = orderRepository;
         this.environment = environment;
     }
 
