@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using MessyOrderManagement.Data;
 using MessyOrderManagement.Constants;
 using MessyOrderManagement.Repositories;
+using MessyOrderManagement.Models;
 
 namespace MessyOrderManagement.Controllers;
 
@@ -59,20 +60,20 @@ public class ReportController : ControllerBase
                 OrderCount = count,
                 Average = count > 0 ? total / count : 0
             };
-            var filePath = "C:\\Reports\\sales_report_" + DateTime.Now.ToString("yyyyMMdd") + ".txt";
+            var reportsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Reports");
+            var filePath = Path.Combine(reportsDirectory, $"sales_report_{DateTime.UtcNow:yyyyMMdd}.txt");
             logger.LogDebug("Writing report to file: {FilePath}", filePath);
-            var dir = Path.GetDirectoryName(filePath);
-            if (dir != null && !Directory.Exists(dir))
+            if (!Directory.Exists(reportsDirectory))
             {
-                Directory.CreateDirectory(dir);
+                Directory.CreateDirectory(reportsDirectory);
             }
 
             using (var file = new StreamWriter(filePath))
             {
-                file.WriteLine("Sales Report - " + DateTime.Now.ToString());
-                file.WriteLine("Total Sales: " + total);
-                file.WriteLine("Order Count: " + count);
-                file.WriteLine("Average: " + (count > 0 ? total / count : 0));
+                await file.WriteLineAsync($"Sales Report - {DateTime.UtcNow}");
+                await file.WriteLineAsync($"Total Sales: {total}");
+                await file.WriteLineAsync($"Order Count: {count}");
+                await file.WriteLineAsync($"Average: {(count > 0 ? total / count : 0)}");
             }
             
             await Task.Delay(300);
@@ -82,7 +83,11 @@ public class ReportController : ControllerBase
         catch (Exception ex)
         {
             logger.LogError(ex, "Error generating sales report");
-            return StatusCode(500);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = "An error occurred while generating the sales report",
+                Details = ex.Message
+            });
         }
     }
 }
