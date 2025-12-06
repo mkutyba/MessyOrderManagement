@@ -6,34 +6,17 @@ namespace MessyOrderManagement.Controllers;
 
 [ApiController]
 [Route("api/customer")]
-public class CustomerController : ControllerBase
+public class CustomerController : BaseController
 {
-    private readonly ILogger<CustomerController> logger;
-    private readonly OrderDbContext db;
-
     public CustomerController(ILogger<CustomerController> logger, OrderDbContext db)
+        : base(logger, db)
     {
-        this.logger = logger;
-        this.db = db;
     }
 
     [HttpGet]
     public IActionResult GetAllCustomers()
     {
-        logger.LogDebug("Getting all customers");
-        var customers = new List<Customer>();
-        try
-        {
-            customers = db.Customers.ToList();
-            logger.LogInformation("Retrieved {Count} customers", customers.Count);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving customers");
-            return StatusCode(500);
-        }
-
-        return Ok(customers);
+        return GetAllEntities(db.Customers, "customers");
     }
 
     [HttpPost]
@@ -45,23 +28,21 @@ public class CustomerController : ControllerBase
             return BadRequest();
         }
 
-        try
-        {
-            if (customer.CreatedDate == DateTime.MinValue)
+        return ExecuteWithErrorHandling(
+            () =>
             {
-                customer.CreatedDate = DateTime.UtcNow;
-            }
+                if (customer.CreatedDate == DateTime.MinValue)
+                {
+                    customer.CreatedDate = DateTime.UtcNow;
+                }
 
-            db.Customers.Add(customer);
-            db.SaveChanges();
-            logger.LogInformation("Customer created successfully with ID: {CustomerId}", customer.Id);
-            return Created($"/api/customer/{customer.Id}", customer);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error creating customer");
-            return StatusCode(500);
-        }
+                db.Customers.Add(customer);
+                db.SaveChanges();
+                logger.LogInformation("Customer created successfully with ID: {CustomerId}", customer.Id);
+                return Created($"/api/customer/{customer.Id}", customer);
+            },
+            "creating",
+            "customer");
     }
 
     [HttpPut("{id}")]
@@ -79,36 +60,32 @@ public class CustomerController : ControllerBase
             return BadRequest();
         }
 
-        try
-        {
-            var existing = db.Customers.FirstOrDefault(c => c.Id == id);
-            if (existing == null)
+        return ExecuteWithErrorHandling(
+            () =>
             {
-                logger.LogWarning("Customer {CustomerId} not found for update", id);
-                return NotFound();
-            }
+                var existing = FindEntityById(db.Customers, id, "customer");
+                if (existing == null)
+                {
+                    return NotFound();
+                }
 
-            existing.Name = customer.Name;
-            existing.Email = customer.Email;
-            existing.Phone = customer.Phone;
-            existing.Address = customer.Address;
-            existing.City = customer.City;
-            existing.State = customer.State;
-            existing.ZipCode = customer.ZipCode;
-            // Preserve the original CreatedDate - do not overwrite it
-            db.SaveChanges();
+                existing.Name = customer.Name;
+                existing.Email = customer.Email;
+                existing.Phone = customer.Phone;
+                existing.Address = customer.Address;
+                existing.City = customer.City;
+                existing.State = customer.State;
+                existing.ZipCode = customer.ZipCode;
+                // Preserve the original CreatedDate - do not overwrite it
+                db.SaveChanges();
 
-            // Return the updated entity with correct ID and CreatedDate
-            customer.Id = id;
-            customer.CreatedDate = existing.CreatedDate;
-            logger.LogInformation("Customer {CustomerId} updated successfully", id);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error updating customer {CustomerId}", id);
-            return StatusCode(500);
-        }
-
-        return Ok(customer);
+                // Return the updated entity with correct ID and CreatedDate
+                customer.Id = id;
+                customer.CreatedDate = existing.CreatedDate;
+                logger.LogInformation("Customer {CustomerId} updated successfully", id);
+                return Ok(customer);
+            },
+            "updating",
+            $"customer {id}");
     }
 }

@@ -7,15 +7,11 @@ namespace MessyOrderManagement.Controllers;
 
 [ApiController]
 [Route("api/order")]
-public class OrderController : ControllerBase
+public class OrderController : BaseController
 {
-    private readonly ILogger<OrderController> logger;
-    private readonly OrderDbContext db;
-
     public OrderController(ILogger<OrderController> logger, OrderDbContext db)
+        : base(logger, db)
     {
-        this.logger = logger;
-        this.db = db;
     }
 
     [HttpGet]
@@ -61,29 +57,7 @@ public class OrderController : ControllerBase
     [HttpGet("{id}")]
     public IActionResult GetOrder(int id)
     {
-        logger.LogDebug("Getting order with ID: {OrderId}", id);
-        Order order = null;
-        try
-        {
-            order = db.Orders.FirstOrDefault(o => o.Id == id);
-            if (order != null)
-            {
-                logger.LogInformation("Order {OrderId} retrieved successfully", id);
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving order {OrderId}", id);
-            return StatusCode(500);
-        }
-
-        if (order == null)
-        {
-            logger.LogWarning("Order {OrderId} not found", id);
-            return NotFound();
-        }
-
-        return Ok(order);
+        return GetEntityById(db.Orders, id, "order");
     }
 
     [HttpPost]
@@ -98,40 +72,37 @@ public class OrderController : ControllerBase
 
         logger.LogDebug("Creating order for customer {CustomerId}, product {ProductId}, quantity {Quantity}", 
             order.CustomerId, order.ProductId, order.Quantity);
-        try
-        {
-            // Handle 0 values - use defaults if not set (messy but works)
-            if (order.CustomerId == OrderConstants.ZeroValue) order.CustomerId = OrderConstants.DefaultCustomerId;
-            if (order.ProductId == OrderConstants.ZeroValue) order.ProductId = OrderConstants.DefaultProductId;
-            if (order.Quantity == OrderConstants.ZeroValue) order.Quantity = OrderConstants.DefaultQuantity;
-            if (order.Price == OrderConstants.ZeroValue) order.Price = OrderConstants.DefaultPrice;
-            var total = order.Quantity * order.Price;
-            order.Total = total;
-            logger.LogDebug("Order total calculated: {Total}", total);
-            if (order.Status == null)
+        return ExecuteWithErrorHandling(
+            () =>
             {
-                order.Status = OrderConstants.StatusPending;
-            }
+                // Handle 0 values - use defaults if not set (messy but works)
+                if (order.CustomerId == OrderConstants.ZeroValue) order.CustomerId = OrderConstants.DefaultCustomerId;
+                if (order.ProductId == OrderConstants.ZeroValue) order.ProductId = OrderConstants.DefaultProductId;
+                if (order.Quantity == OrderConstants.ZeroValue) order.Quantity = OrderConstants.DefaultQuantity;
+                if (order.Price == OrderConstants.ZeroValue) order.Price = OrderConstants.DefaultPrice;
+                var total = order.Quantity * order.Price;
+                order.Total = total;
+                logger.LogDebug("Order total calculated: {Total}", total);
+                if (order.Status == null)
+                {
+                    order.Status = OrderConstants.StatusPending;
+                }
 
-            if (order.Date == DateTime.MinValue)
-            {
-                order.Date = DateTime.UtcNow;
-            }
+                if (order.Date == DateTime.MinValue)
+                {
+                    order.Date = DateTime.UtcNow;
+                }
 
-            db.Orders.Add(order);
-            db.SaveChanges();
-            logger.LogInformation("Order created successfully with ID: {OrderId}", order.Id);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error creating order for customer {CustomerId}", order.CustomerId);
-            return StatusCode(500);
-        }
-
-        return CreatedAtAction(nameof(GetOrder), new
-        {
-            id = order.Id
-        }, order);
+                db.Orders.Add(order);
+                db.SaveChanges();
+                logger.LogInformation("Order created successfully with ID: {OrderId}", order.Id);
+                return CreatedAtAction(nameof(GetOrder), new
+                {
+                    id = order.Id
+                }, order);
+            },
+            "creating",
+            $"order for customer {order.CustomerId}");
     }
 
     [HttpPut("{id}")]
@@ -144,62 +115,54 @@ public class OrderController : ControllerBase
         }
 
         logger.LogDebug("Updating order {OrderId}", id);
-        try
-        {
-            var existing = db.Orders.FirstOrDefault(o => o.Id == id);
-            if (existing == null)
+        return ExecuteWithErrorHandling(
+            () =>
             {
-                logger.LogWarning("Order {OrderId} not found for update", id);
-                return NotFound();
-            }
+                var existing = FindEntityById(db.Orders, id, "order");
+                if (existing == null)
+                {
+                    return NotFound();
+                }
 
-            var temp = order.Quantity * order.Price;
-            order.Total = temp;
-            existing.CustomerId = order.CustomerId;
-            existing.ProductId = order.ProductId;
-            existing.Quantity = order.Quantity;
-            existing.Price = order.Price;
-            existing.Status = order.Status;
-            existing.Date = order.Date;
-            existing.Notes = order.Notes;
-            existing.Total = order.Total;
-            db.SaveChanges();
-            order.Id = id;
-            logger.LogInformation("Order {OrderId} updated successfully", id);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error updating order {OrderId}", id);
-            return StatusCode(500);
-        }
-
-        return Ok(order);
+                var temp = order.Quantity * order.Price;
+                order.Total = temp;
+                existing.CustomerId = order.CustomerId;
+                existing.ProductId = order.ProductId;
+                existing.Quantity = order.Quantity;
+                existing.Price = order.Price;
+                existing.Status = order.Status;
+                existing.Date = order.Date;
+                existing.Notes = order.Notes;
+                existing.Total = order.Total;
+                db.SaveChanges();
+                order.Id = id;
+                logger.LogInformation("Order {OrderId} updated successfully", id);
+                return Ok(order);
+            },
+            "updating",
+            $"order {id}");
     }
 
     [HttpDelete("{id}")]
     public IActionResult DeleteOrder(int id)
     {
         logger.LogInformation("Deleting order {OrderId}", id);
-        try
-        {
-            var existing = db.Orders.FirstOrDefault(o => o.Id == id);
-            if (existing == null)
+        return ExecuteWithErrorHandling(
+            () =>
             {
-                logger.LogWarning("Order {OrderId} not found for deletion", id);
-                return NotFound();
-            }
+                var existing = FindEntityById(db.Orders, id, "order");
+                if (existing == null)
+                {
+                    return NotFound();
+                }
 
-            db.Orders.Remove(existing);
-            db.SaveChanges();
-            logger.LogInformation("Order {OrderId} deleted successfully", id);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error deleting order {OrderId}", id);
-            return StatusCode(500);
-        }
-
-        return NoContent();
+                db.Orders.Remove(existing);
+                db.SaveChanges();
+                logger.LogInformation("Order {OrderId} deleted successfully", id);
+                return NoContent();
+            },
+            "deleting",
+            $"order {id}");
     }
 
     [HttpPut("{id}/status")]
@@ -212,43 +175,39 @@ public class OrderController : ControllerBase
             return BadRequest();
         }
 
-        try
-        {
-            var order = db.Orders.FirstOrDefault(o => o.Id == id);
-            if (order == null)
+        return ExecuteWithErrorHandling(
+            () =>
             {
-                logger.LogWarning("Order {OrderId} not found for status update", id);
-                return NotFound();
-            }
+                var order = FindEntityById(db.Orders, id, "order");
+                if (order == null)
+                {
+                    return NotFound();
+                }
 
-            var currentStatus = order.Status ?? string.Empty;
-            var orderDate = order.Date;
-            logger.LogDebug("Order {OrderId} status transition: {CurrentStatus} -> {NewStatus}", 
-                id, currentStatus, status);
+                var currentStatus = order.Status ?? string.Empty;
+                var orderDate = order.Date;
+                logger.LogDebug("Order {OrderId} status transition: {CurrentStatus} -> {NewStatus}", 
+                    id, currentStatus, status);
 
-            var (isValid, errorMessage) = ValidateStatusTransition(currentStatus, status, orderDate);
-            if (!isValid)
-            {
-                logger.LogWarning("Invalid status transition for order {OrderId}: {ErrorMessage}", id, errorMessage);
-                return BadRequest(errorMessage);
-            }
+                var (isValid, errorMessage) = ValidateStatusTransition(currentStatus, status, orderDate);
+                if (!isValid)
+                {
+                    logger.LogWarning("Invalid status transition for order {OrderId}: {ErrorMessage}", id, errorMessage);
+                    return BadRequest(errorMessage);
+                }
 
-            order.Status = status;
-            if (status == OrderConstants.StatusShipped)
-            {
-                db.Entry(order).Property("Status").IsModified = true;
-            }
+                order.Status = status;
+                if (status == OrderConstants.StatusShipped)
+                {
+                    db.Entry(order).Property("Status").IsModified = true;
+                }
 
-            db.SaveChanges();
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error updating order {OrderId} status to {Status}", id, status);
-            return StatusCode(500);
-        }
-
-        logger.LogInformation("Order {OrderId} status updated successfully to {Status}", id, status);
-        return Ok();
+                db.SaveChanges();
+                logger.LogInformation("Order {OrderId} status updated successfully to {Status}", id, status);
+                return Ok();
+            },
+            "updating status for",
+            $"order {id}");
     }
 
     private (bool isValid, string? errorMessage) ValidateStatusTransition(string currentStatus, string newStatus, DateTime orderDate)
