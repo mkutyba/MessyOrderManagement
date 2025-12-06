@@ -100,17 +100,17 @@ The test project (`MessyOrderManagement.Tests`) includes:
 - `PUT /api/order/{id}/status` - Update order status (deeply nested logic)
 
 ### Customers
-- `GET /api/order/customer` - Get all customers
-- `POST /api/order/customer` - Create customer
-- `PUT /api/order/customer/{id}` - Update customer
+- `GET /api/customer` - Get all customers
+- `POST /api/customer` - Create customer
+- `PUT /api/customer/{id}` - Update customer
 
 ### Products
-- `GET /api/order/product` - Get all products
-- `POST /api/order/product` - Create product
-- `PUT /api/order/product/{id}` - Update product
+- `GET /api/product` - Get all products
+- `POST /api/product` - Create product
+- `PUT /api/product/{id}` - Update product
 
 ### Reports
-- `GET /api/order/report/sales` - Generate sales report (writes to C:\Reports\)
+- `GET /api/report/sales` - Generate sales report (writes to C:\Reports\)
 
 ## Technology Stack
 

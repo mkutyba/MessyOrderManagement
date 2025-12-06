@@ -19,7 +19,7 @@ public class ReportControllerTests : IClassFixture<IntegrationTestBase>
     public async Task GetSalesReport_ShouldReturnOk()
     {
         // Act
-        var response = await _client.GetAsync("/api/order/report/sales", TestContext.Current.CancellationToken);
+        var response = await _client.GetAsync("/api/report/sales", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -44,7 +44,7 @@ public class ReportControllerTests : IClassFixture<IntegrationTestBase>
         await _client.PostAsJsonAsync("/api/order", activeOrder, TestContext.Current.CancellationToken);
 
         // Act
-        var response = await _client.GetAsync("/api/order/report/sales", TestContext.Current.CancellationToken);
+        var response = await _client.GetAsync("/api/report/sales", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -83,7 +83,7 @@ public class ReportControllerTests : IClassFixture<IntegrationTestBase>
         await _client.PostAsJsonAsync("/api/order", completedOrder, TestContext.Current.CancellationToken);
 
         // Act
-        var response = await _client.GetAsync("/api/order/report/sales", TestContext.Current.CancellationToken);
+        var response = await _client.GetAsync("/api/report/sales", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -120,7 +120,7 @@ public class ReportControllerTests : IClassFixture<IntegrationTestBase>
         await _client.PostAsJsonAsync("/api/order", order2, TestContext.Current.CancellationToken);
 
         // Act
-        var response = await _client.GetAsync("/api/order/report/sales", TestContext.Current.CancellationToken);
+        var response = await _client.GetAsync("/api/report/sales", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -132,7 +132,7 @@ public class ReportControllerTests : IClassFixture<IntegrationTestBase>
     public async Task GetSalesReport_ShouldHandleEmptyResults()
     {
         // Act - Get report when there are no non-pending orders
-        var response = await _client.GetAsync("/api/order/report/sales", TestContext.Current.CancellationToken);
+        var response = await _client.GetAsync("/api/report/sales", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

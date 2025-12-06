@@ -19,7 +19,7 @@ public class CustomerControllerTests : IClassFixture<IntegrationTestBase>
     public async Task GetAllCustomers_ShouldReturnOk()
     {
         // Act
-        var response = await _client.GetAsync("/api/order/customer", TestContext.Current.CancellationToken);
+        var response = await _client.GetAsync("/api/customer", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -44,7 +44,7 @@ public class CustomerControllerTests : IClassFixture<IntegrationTestBase>
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/api/order/customer", newCustomer, TestContext.Current.CancellationToken);
+        var response = await _client.PostAsJsonAsync("/api/customer", newCustomer, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -59,7 +59,7 @@ public class CustomerControllerTests : IClassFixture<IntegrationTestBase>
     public async Task CreateCustomer_WithNullCustomer_ShouldReturnBadRequest()
     {
         // Act
-        var response = await _client.PostAsync("/api/order/customer", null, TestContext.Current.CancellationToken);
+        var response = await _client.PostAsync("/api/customer", null, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -81,7 +81,7 @@ public class CustomerControllerTests : IClassFixture<IntegrationTestBase>
             CreatedDate = DateTime.Now
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/api/order/customer", newCustomer, TestContext.Current.CancellationToken);
+        var createResponse = await _client.PostAsJsonAsync("/api/customer", newCustomer, TestContext.Current.CancellationToken);
         var createdCustomer = await createResponse.Content.ReadFromJsonAsync<Customer>(TestContext.Current.CancellationToken);
         var customerId = createdCustomer!.Id;
 
@@ -99,7 +99,7 @@ public class CustomerControllerTests : IClassFixture<IntegrationTestBase>
         };
 
         // Act
-        var response = await _client.PutAsJsonAsync($"/api/order/customer/{customerId}", updatedCustomer, TestContext.Current.CancellationToken);
+        var response = await _client.PutAsJsonAsync($"/api/customer/{customerId}", updatedCustomer, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -114,7 +114,7 @@ public class CustomerControllerTests : IClassFixture<IntegrationTestBase>
     public async Task UpdateCustomer_WithNullCustomer_ShouldReturnBadRequest()
     {
         // Act - Sending null content returns UnsupportedMediaType at framework level
-        var response = await _client.PutAsync("/api/order/customer/1", null, TestContext.Current.CancellationToken);
+        var response = await _client.PutAsync("/api/customer/1", null, TestContext.Current.CancellationToken);
 
         // Assert - Framework returns UnsupportedMediaType for null content
         Assert.True(response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.UnsupportedMediaType);
@@ -138,7 +138,7 @@ public class CustomerControllerTests : IClassFixture<IntegrationTestBase>
         };
 
         // Act
-        var response = await _client.PutAsJsonAsync($"/api/order/customer/{invalidId}", customer, TestContext.Current.CancellationToken);
+        var response = await _client.PutAsJsonAsync($"/api/customer/{invalidId}", customer, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);

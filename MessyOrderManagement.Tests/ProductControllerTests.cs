@@ -19,7 +19,7 @@ public class ProductControllerTests : IClassFixture<IntegrationTestBase>
     public async Task GetAllProducts_ShouldReturnOk()
     {
         // Act
-        var response = await _client.GetAsync("/api/order/product", TestContext.Current.CancellationToken);
+        var response = await _client.GetAsync("/api/product", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -43,7 +43,7 @@ public class ProductControllerTests : IClassFixture<IntegrationTestBase>
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/api/order/product", newProduct, TestContext.Current.CancellationToken);
+        var response = await _client.PostAsJsonAsync("/api/product", newProduct, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -58,7 +58,7 @@ public class ProductControllerTests : IClassFixture<IntegrationTestBase>
     public async Task CreateProduct_WithNullProduct_ShouldReturnBadRequest()
     {
         // Act - Sending null content returns UnsupportedMediaType at framework level
-        var response = await _client.PostAsync("/api/order/product", null, TestContext.Current.CancellationToken);
+        var response = await _client.PostAsync("/api/product", null, TestContext.Current.CancellationToken);
 
         // Assert - Framework returns UnsupportedMediaType for null content
         Assert.True(response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.UnsupportedMediaType);
@@ -80,7 +80,7 @@ public class ProductControllerTests : IClassFixture<IntegrationTestBase>
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/api/order/product", newProduct, TestContext.Current.CancellationToken);
+        var response = await _client.PostAsJsonAsync("/api/product", newProduct, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -103,7 +103,7 @@ public class ProductControllerTests : IClassFixture<IntegrationTestBase>
             LastUpdated = DateTime.Now
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/api/order/product", newProduct, TestContext.Current.CancellationToken);
+        var createResponse = await _client.PostAsJsonAsync("/api/product", newProduct, TestContext.Current.CancellationToken);
         var createdProduct = await createResponse.Content.ReadFromJsonAsync<Product>(TestContext.Current.CancellationToken);
         var productId = createdProduct!.Id;
 
@@ -120,7 +120,7 @@ public class ProductControllerTests : IClassFixture<IntegrationTestBase>
         };
 
         // Act
-        var response = await _client.PutAsJsonAsync($"/api/order/product/{productId}", updatedProduct, TestContext.Current.CancellationToken);
+        var response = await _client.PutAsJsonAsync($"/api/product/{productId}", updatedProduct, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -137,7 +137,7 @@ public class ProductControllerTests : IClassFixture<IntegrationTestBase>
     public async Task UpdateProduct_WithNullProduct_ShouldReturnBadRequest()
     {
         // Act - Sending null content returns UnsupportedMediaType at framework level
-        var response = await _client.PutAsync("/api/order/product/1", null, TestContext.Current.CancellationToken);
+        var response = await _client.PutAsync("/api/product/1", null, TestContext.Current.CancellationToken);
 
         // Assert - Framework returns UnsupportedMediaType for null content
         Assert.True(response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.UnsupportedMediaType);
@@ -160,7 +160,7 @@ public class ProductControllerTests : IClassFixture<IntegrationTestBase>
         };
 
         // Act
-        var response = await _client.PutAsJsonAsync($"/api/order/product/{invalidId}", product, TestContext.Current.CancellationToken);
+        var response = await _client.PutAsJsonAsync($"/api/product/{invalidId}", product, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -181,7 +181,7 @@ public class ProductControllerTests : IClassFixture<IntegrationTestBase>
             LastUpdated = DateTime.Now.AddDays(-1)
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/api/order/product", newProduct, TestContext.Current.CancellationToken);
+        var createResponse = await _client.PostAsJsonAsync("/api/product", newProduct, TestContext.Current.CancellationToken);
         var createdProduct = await createResponse.Content.ReadFromJsonAsync<Product>(TestContext.Current.CancellationToken);
         var productId = createdProduct!.Id;
         var originalLastUpdated = createdProduct.LastUpdated;
@@ -202,7 +202,7 @@ public class ProductControllerTests : IClassFixture<IntegrationTestBase>
         };
 
         // Act
-        var response = await _client.PutAsJsonAsync($"/api/order/product/{productId}", updatedProduct, TestContext.Current.CancellationToken);
+        var response = await _client.PutAsJsonAsync($"/api/product/{productId}", updatedProduct, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

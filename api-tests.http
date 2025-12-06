@@ -100,11 +100,11 @@ Content-Type: application/json
 ###############################################
 
 ### Get All Customers
-GET {{baseUrl}}/api/order/customer
+GET {{baseUrl}}/api/customer
 Accept: application/json
 
 ### Create Customer
-POST {{baseUrl}}/api/order/customer
+POST {{baseUrl}}/api/customer
 Content-Type: application/json
 
 {
@@ -119,7 +119,7 @@ Content-Type: application/json
 }
 
 ### Create Customer (Minimal)
-POST {{baseUrl}}/api/order/customer
+POST {{baseUrl}}/api/customer
 Content-Type: application/json
 
 {
@@ -133,7 +133,7 @@ Content-Type: application/json
 }
 
 ### Update Customer
-PUT {{baseUrl}}/api/order/customer/{{customerId}}
+PUT {{baseUrl}}/api/customer/{{customerId}}
 Content-Type: application/json
 
 {
@@ -153,11 +153,11 @@ Content-Type: application/json
 ###############################################
 
 ### Get All Products
-GET {{baseUrl}}/api/order/product
+GET {{baseUrl}}/api/product
 Accept: application/json
 
 ### Create Product
-POST {{baseUrl}}/api/order/product
+POST {{baseUrl}}/api/product
 Content-Type: application/json
 
 {
@@ -171,7 +171,7 @@ Content-Type: application/json
 }
 
 ### Create Product (Minimal)
-POST {{baseUrl}}/api/order/product
+POST {{baseUrl}}/api/product
 Content-Type: application/json
 
 {
@@ -183,7 +183,7 @@ Content-Type: application/json
 }
 
 ### Update Product
-PUT {{baseUrl}}/api/order/product/{{productId}}
+PUT {{baseUrl}}/api/product/{{productId}}
 Content-Type: application/json
 
 {
@@ -198,7 +198,7 @@ Content-Type: application/json
 }
 
 ### Update Product Stock
-PUT {{baseUrl}}/api/order/product/1
+PUT {{baseUrl}}/api/product/1
 Content-Type: application/json
 
 {
@@ -217,7 +217,7 @@ Content-Type: application/json
 ###############################################
 
 ### Get Sales Report
-GET {{baseUrl}}/api/order/report/sales
+GET {{baseUrl}}/api/report/sales
 Accept: application/json
 
 ###############################################
@@ -226,7 +226,7 @@ Accept: application/json
 
 ### Scenario 1: Create Customer, Product, then Order
 ### Step 1: Create Customer
-POST {{baseUrl}}/api/order/customer
+POST {{baseUrl}}/api/customer
 Content-Type: application/json
 
 {
@@ -240,7 +240,7 @@ Content-Type: application/json
 }
 
 ### Step 2: Create Product
-POST {{baseUrl}}/api/order/product
+POST {{baseUrl}}/api/product
 Content-Type: application/json
 
 {
