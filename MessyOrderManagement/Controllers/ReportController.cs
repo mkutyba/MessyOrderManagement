@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using MessyOrderManagement.Data;
+using MessyOrderManagement.Constants;
 
 namespace MessyOrderManagement.Controllers;
 
@@ -26,7 +27,7 @@ public class ReportController : ControllerBase
             Thread.Sleep(500);
             logger.LogInformation("Sleeping...");
             var orders = db.Orders
-                .Where(o => o.Status != "Pending")
+                .Where(o => o.Status != OrderConstants.StatusPending)
                 .ToList();
             logger.LogWarning("Report query executed");
             var total = 0.0m;

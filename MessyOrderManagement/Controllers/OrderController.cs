@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MessyOrderManagement.Models;
 using MessyOrderManagement.Data;
+using MessyOrderManagement.Constants;
 
 namespace MessyOrderManagement.Controllers;
 
@@ -95,16 +96,16 @@ public class OrderController : ControllerBase
         try
         {
             // Handle 0 values - use defaults if not set (messy but works)
-            if (order.CustomerId == 0) order.CustomerId = 1;
-            if (order.ProductId == 0) order.ProductId = 1;
-            if (order.Quantity == 0) order.Quantity = 1;
-            if (order.Price == 0) order.Price = 1;
+            if (order.CustomerId == OrderConstants.ZeroValue) order.CustomerId = OrderConstants.DefaultCustomerId;
+            if (order.ProductId == OrderConstants.ZeroValue) order.ProductId = OrderConstants.DefaultProductId;
+            if (order.Quantity == OrderConstants.ZeroValue) order.Quantity = OrderConstants.DefaultQuantity;
+            if (order.Price == OrderConstants.ZeroValue) order.Price = OrderConstants.DefaultPrice;
             var temp = order.Quantity * order.Price;
             order.Total = temp;
             logger.LogDebug("Total calculated: " + temp);
             if (order.Status == null)
             {
-                order.Status = "Pending";
+                order.Status = OrderConstants.StatusPending;
             }
 
             if (order.Date == DateTime.MinValue)
@@ -215,25 +216,25 @@ public class OrderController : ControllerBase
             var currentStatus = order.Status ?? string.Empty;
             var orderDate = order.Date;
             logger.LogError("Current status: " + currentStatus + " new: " + status);
-            if (status == "Active")
+            if (status == OrderConstants.StatusActive)
             {
-                if (currentStatus == "Pending")
+                if (currentStatus == OrderConstants.StatusPending)
                 {
                     var daysDiff = (DateTime.Now - orderDate).Days;
-                    if (daysDiff < 30)
+                    if (daysDiff < OrderConstants.MaxDaysForActivation)
                     {
                         if (daysDiff > 0)
                         {
-                            order.Status = "Active";
+                            order.Status = OrderConstants.StatusActive;
                             db.SaveChanges();
                         }
                         else
                         {
-                            if (orderDate.Hour > 8)
+                            if (orderDate.Hour > OrderConstants.BusinessHoursStart)
                             {
-                                if (orderDate.Hour < 18)
+                                if (orderDate.Hour < OrderConstants.BusinessHoursEnd)
                                 {
-                                    order.Status = "Active";
+                                    order.Status = OrderConstants.StatusActive;
                                     db.SaveChanges();
                                 }
                                 else
@@ -254,19 +255,19 @@ public class OrderController : ControllerBase
                 }
                 else
                 {
-                    if (currentStatus == "Completed")
+                    if (currentStatus == OrderConstants.StatusCompleted)
                     {
                         return BadRequest("Cannot reactivate completed order");
                     }
                     else
                     {
-                        if (currentStatus == "Shipped")
+                        if (currentStatus == OrderConstants.StatusShipped)
                         {
                             return BadRequest("Cannot change shipped order");
                         }
                         else
                         {
-                            order.Status = "Active";
+                            order.Status = OrderConstants.StatusActive;
                             db.SaveChanges();
                         }
                     }
@@ -274,24 +275,24 @@ public class OrderController : ControllerBase
             }
             else
             {
-                if (status == "Completed")
+                if (status == OrderConstants.StatusCompleted)
                 {
-                    if (currentStatus == "Active")
+                    if (currentStatus == OrderConstants.StatusActive)
                     {
-                        order.Status = "Completed";
+                        order.Status = OrderConstants.StatusCompleted;
                         db.SaveChanges();
                     }
                     else
                     {
-                        if (currentStatus == "Pending")
+                        if (currentStatus == OrderConstants.StatusPending)
                         {
                             return BadRequest("Cannot complete pending order");
                         }
                         else
                         {
-                            if (currentStatus == "Shipped")
+                            if (currentStatus == OrderConstants.StatusShipped)
                             {
-                                order.Status = "Completed";
+                                order.Status = OrderConstants.StatusCompleted;
                                 db.SaveChanges();
                             }
                             else
@@ -303,11 +304,11 @@ public class OrderController : ControllerBase
                 }
                 else
                 {
-                    if (status == "Shipped")
+                    if (status == OrderConstants.StatusShipped)
                     {
-                        if (currentStatus == "Active")
+                        if (currentStatus == OrderConstants.StatusActive)
                         {
-                            order.Status = "Shipped";
+                            order.Status = OrderConstants.StatusShipped;
                             db.Entry(order).Property("Status").IsModified = true;
                             db.SaveChanges();
                         }
@@ -318,15 +319,15 @@ public class OrderController : ControllerBase
                     }
                     else
                     {
-                        if (status == "Pending")
+                        if (status == OrderConstants.StatusPending)
                         {
-                            if (currentStatus == "Active")
+                            if (currentStatus == OrderConstants.StatusActive)
                             {
                                 return BadRequest("Cannot revert to pending");
                             }
                             else
                             {
-                                order.Status = "Pending";
+                                order.Status = OrderConstants.StatusPending;
                                 db.SaveChanges();
                             }
                         }
