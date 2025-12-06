@@ -164,6 +164,10 @@ public class ProductControllerTests : IClassFixture<IntegrationTestBase>
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>(TestContext.Current.CancellationToken);
+        Assert.NotNull(errorResponse);
+        Assert.NotNull(errorResponse.Message);
+        Assert.Contains("not found", errorResponse.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

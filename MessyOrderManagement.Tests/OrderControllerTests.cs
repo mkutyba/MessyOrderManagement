@@ -68,6 +68,23 @@ public class OrderControllerTests : IClassFixture<IntegrationTestBase>
     }
 
     [Fact]
+    public async Task GetAllOrders_WithInvalidCustomerId_ShouldReturnBadRequestWithErrorResponse()
+    {
+        // Arrange
+        var invalidCustomerId = "invalid";
+
+        // Act
+        var response = await _client.GetAsync($"/api/order?customerId={invalidCustomerId}", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>(TestContext.Current.CancellationToken);
+        Assert.NotNull(errorResponse);
+        Assert.NotNull(errorResponse.Message);
+        Assert.Contains("customerId", errorResponse.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task GetAllOrders_WithStatusAndCustomerIdFilter_ShouldReturnFilteredOrders()
     {
         // Arrange
@@ -132,6 +149,10 @@ public class OrderControllerTests : IClassFixture<IntegrationTestBase>
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>(TestContext.Current.CancellationToken);
+        Assert.NotNull(errorResponse);
+        Assert.NotNull(errorResponse.Message);
+        Assert.Contains("not found", errorResponse.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -265,6 +286,10 @@ public class OrderControllerTests : IClassFixture<IntegrationTestBase>
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>(TestContext.Current.CancellationToken);
+        Assert.NotNull(errorResponse);
+        Assert.NotNull(errorResponse.Message);
+        Assert.Contains("not found", errorResponse.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -307,6 +332,10 @@ public class OrderControllerTests : IClassFixture<IntegrationTestBase>
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>(TestContext.Current.CancellationToken);
+        Assert.NotNull(errorResponse);
+        Assert.NotNull(errorResponse.Message);
+        Assert.Contains("not found", errorResponse.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -364,6 +393,10 @@ public class OrderControllerTests : IClassFixture<IntegrationTestBase>
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>(TestContext.Current.CancellationToken);
+        Assert.NotNull(errorResponse);
+        Assert.NotNull(errorResponse.Message);
+        Assert.Contains("not found", errorResponse.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
