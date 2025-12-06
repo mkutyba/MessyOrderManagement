@@ -225,128 +225,21 @@ public class OrderController : ControllerBase
             var orderDate = order.Date;
             logger.LogDebug("Order {OrderId} status transition: {CurrentStatus} -> {NewStatus}", 
                 id, currentStatus, status);
-            if (status == OrderConstants.StatusActive)
+
+            var (isValid, errorMessage) = ValidateStatusTransition(currentStatus, status, orderDate);
+            if (!isValid)
             {
-                if (currentStatus == OrderConstants.StatusPending)
-                {
-                    var daysDiff = (DateTime.Now - orderDate).Days;
-                    if (daysDiff < OrderConstants.MaxDaysForActivation)
-                    {
-                        if (daysDiff > 0)
-                        {
-                            order.Status = OrderConstants.StatusActive;
-                            db.SaveChanges();
-                        }
-                        else
-                        {
-                            if (orderDate.Hour > OrderConstants.BusinessHoursStart)
-                            {
-                                if (orderDate.Hour < OrderConstants.BusinessHoursEnd)
-                                {
-                                    order.Status = OrderConstants.StatusActive;
-                                    db.SaveChanges();
-                                }
-                                else
-                                {
-                                    return BadRequest("Cannot activate after hours");
-                                }
-                            }
-                            else
-                            {
-                                return BadRequest("Cannot activate before hours");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        return BadRequest("Order too old");
-                    }
-                }
-                else
-                {
-                    if (currentStatus == OrderConstants.StatusCompleted)
-                    {
-                        return BadRequest("Cannot reactivate completed order");
-                    }
-                    else
-                    {
-                        if (currentStatus == OrderConstants.StatusShipped)
-                        {
-                            return BadRequest("Cannot change shipped order");
-                        }
-                        else
-                        {
-                            order.Status = OrderConstants.StatusActive;
-                            db.SaveChanges();
-                        }
-                    }
-                }
+                logger.LogWarning("Invalid status transition for order {OrderId}: {ErrorMessage}", id, errorMessage);
+                return BadRequest(errorMessage);
             }
-            else
+
+            order.Status = status;
+            if (status == OrderConstants.StatusShipped)
             {
-                if (status == OrderConstants.StatusCompleted)
-                {
-                    if (currentStatus == OrderConstants.StatusActive)
-                    {
-                        order.Status = OrderConstants.StatusCompleted;
-                        db.SaveChanges();
-                    }
-                    else
-                    {
-                        if (currentStatus == OrderConstants.StatusPending)
-                        {
-                            return BadRequest("Cannot complete pending order");
-                        }
-                        else
-                        {
-                            if (currentStatus == OrderConstants.StatusShipped)
-                            {
-                                order.Status = OrderConstants.StatusCompleted;
-                                db.SaveChanges();
-                            }
-                            else
-                            {
-                                return BadRequest("Invalid status transition");
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    if (status == OrderConstants.StatusShipped)
-                    {
-                        if (currentStatus == OrderConstants.StatusActive)
-                        {
-                            order.Status = OrderConstants.StatusShipped;
-                            db.Entry(order).Property("Status").IsModified = true;
-                            db.SaveChanges();
-                        }
-                        else
-                        {
-                            return BadRequest("Can only ship active orders");
-                        }
-                    }
-                    else
-                    {
-                        if (status == OrderConstants.StatusPending)
-                        {
-                            if (currentStatus == OrderConstants.StatusActive)
-                            {
-                                return BadRequest("Cannot revert to pending");
-                            }
-                            else
-                            {
-                                order.Status = OrderConstants.StatusPending;
-                                db.SaveChanges();
-                            }
-                        }
-                        else
-                        {
-                            return BadRequest("Invalid status");
-                        }
-                    }
-                }
+                db.Entry(order).Property("Status").IsModified = true;
             }
+
+            db.SaveChanges();
         }
         catch (Exception ex)
         {
@@ -356,5 +249,95 @@ public class OrderController : ControllerBase
 
         logger.LogInformation("Order {OrderId} status updated successfully to {Status}", id, status);
         return Ok();
+    }
+
+    private (bool isValid, string? errorMessage) ValidateStatusTransition(string currentStatus, string newStatus, DateTime orderDate)
+    {
+        // Validate status value
+        if (newStatus != OrderConstants.StatusPending &&
+            newStatus != OrderConstants.StatusActive &&
+            newStatus != OrderConstants.StatusCompleted &&
+            newStatus != OrderConstants.StatusShipped)
+        {
+            return (false, "Invalid status");
+        }
+
+        // Transition to Active
+        if (newStatus == OrderConstants.StatusActive)
+        {
+            if (currentStatus == OrderConstants.StatusCompleted)
+            {
+                return (false, "Cannot reactivate completed order");
+            }
+
+            if (currentStatus == OrderConstants.StatusShipped)
+            {
+                return (false, "Cannot change shipped order");
+            }
+
+            if (currentStatus == OrderConstants.StatusPending)
+            {
+                var daysDiff = (DateTime.Now - orderDate).Days;
+                if (daysDiff >= OrderConstants.MaxDaysForActivation)
+                {
+                    return (false, "Order too old");
+                }
+
+                if (daysDiff == 0)
+                {
+                    if (orderDate.Hour <= OrderConstants.BusinessHoursStart)
+                    {
+                        return (false, "Cannot activate before hours");
+                    }
+
+                    if (orderDate.Hour >= OrderConstants.BusinessHoursEnd)
+                    {
+                        return (false, "Cannot activate after hours");
+                    }
+                }
+            }
+
+            return (true, null);
+        }
+
+        // Transition to Completed
+        if (newStatus == OrderConstants.StatusCompleted)
+        {
+            if (currentStatus == OrderConstants.StatusPending)
+            {
+                return (false, "Cannot complete pending order");
+            }
+
+            if (currentStatus == OrderConstants.StatusActive || currentStatus == OrderConstants.StatusShipped)
+            {
+                return (true, null);
+            }
+
+            return (false, "Invalid status transition");
+        }
+
+        // Transition to Shipped
+        if (newStatus == OrderConstants.StatusShipped)
+        {
+            if (currentStatus != OrderConstants.StatusActive)
+            {
+                return (false, "Can only ship active orders");
+            }
+
+            return (true, null);
+        }
+
+        // Transition to Pending
+        if (newStatus == OrderConstants.StatusPending)
+        {
+            if (currentStatus == OrderConstants.StatusActive)
+            {
+                return (false, "Cannot revert to pending");
+            }
+
+            return (true, null);
+        }
+
+        return (false, "Invalid status transition");
     }
 }
